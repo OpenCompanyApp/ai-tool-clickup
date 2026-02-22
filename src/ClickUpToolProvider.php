@@ -4,22 +4,39 @@ namespace OpenCompany\AiToolClickUp;
 
 use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Contracts\Tool;
+use OpenCompany\AiToolClickUp\Tools\ClickUpAddComment;
+use OpenCompany\AiToolClickUp\Tools\ClickUpAddTag;
 use OpenCompany\AiToolClickUp\Tools\ClickUpAttachFile;
-use OpenCompany\AiToolClickUp\Tools\ClickUpChat;
+use OpenCompany\AiToolClickUp\Tools\ClickUpCreateDocPage;
+use OpenCompany\AiToolClickUp\Tools\ClickUpCreateFolder;
+use OpenCompany\AiToolClickUp\Tools\ClickUpCreateList;
+use OpenCompany\AiToolClickUp\Tools\ClickUpCreateListInFolder;
 use OpenCompany\AiToolClickUp\Tools\ClickUpCreateTask;
+use OpenCompany\AiToolClickUp\Tools\ClickUpCurrentTimeEntry;
 use OpenCompany\AiToolClickUp\Tools\ClickUpDeleteTask;
+use OpenCompany\AiToolClickUp\Tools\ClickUpFindMember;
+use OpenCompany\AiToolClickUp\Tools\ClickUpGetDocPages;
+use OpenCompany\AiToolClickUp\Tools\ClickUpGetFolder;
 use OpenCompany\AiToolClickUp\Tools\ClickUpGetHierarchy;
+use OpenCompany\AiToolClickUp\Tools\ClickUpGetList;
 use OpenCompany\AiToolClickUp\Tools\ClickUpGetTask;
 use OpenCompany\AiToolClickUp\Tools\ClickUpGetTasks;
-use OpenCompany\AiToolClickUp\Tools\ClickUpManageComments;
+use OpenCompany\AiToolClickUp\Tools\ClickUpListChannels;
+use OpenCompany\AiToolClickUp\Tools\ClickUpListDocPages;
+use OpenCompany\AiToolClickUp\Tools\ClickUpListMembers;
+use OpenCompany\AiToolClickUp\Tools\ClickUpListTimeEntries;
+use OpenCompany\AiToolClickUp\Tools\ClickUpLogTime;
 use OpenCompany\AiToolClickUp\Tools\ClickUpManageDocument;
-use OpenCompany\AiToolClickUp\Tools\ClickUpManageDocumentPages;
-use OpenCompany\AiToolClickUp\Tools\ClickUpManageFolder;
-use OpenCompany\AiToolClickUp\Tools\ClickUpManageList;
-use OpenCompany\AiToolClickUp\Tools\ClickUpManageTags;
-use OpenCompany\AiToolClickUp\Tools\ClickUpMembers;
+use OpenCompany\AiToolClickUp\Tools\ClickUpReadComments;
+use OpenCompany\AiToolClickUp\Tools\ClickUpRemoveTag;
+use OpenCompany\AiToolClickUp\Tools\ClickUpResolveMembers;
 use OpenCompany\AiToolClickUp\Tools\ClickUpSearch;
-use OpenCompany\AiToolClickUp\Tools\ClickUpTimeTracking;
+use OpenCompany\AiToolClickUp\Tools\ClickUpSendMessage;
+use OpenCompany\AiToolClickUp\Tools\ClickUpStartTimer;
+use OpenCompany\AiToolClickUp\Tools\ClickUpStopTimer;
+use OpenCompany\AiToolClickUp\Tools\ClickUpUpdateDocPage;
+use OpenCompany\AiToolClickUp\Tools\ClickUpUpdateFolder;
+use OpenCompany\AiToolClickUp\Tools\ClickUpUpdateList;
 use OpenCompany\AiToolClickUp\Tools\ClickUpUpdateTask;
 use OpenCompany\IntegrationCore\Contracts\ConfigurableIntegration;
 use OpenCompany\IntegrationCore\Contracts\ToolProvider;
@@ -138,12 +155,27 @@ class ClickUpToolProvider implements ToolProvider, ConfigurableIntegration
                 'description' => 'Search tasks across the workspace.',
                 'icon' => 'ph:magnifying-glass',
             ],
-            'clickup_members' => [
-                'class' => ClickUpMembers::class,
+            // Members
+            'clickup_list_members' => [
+                'class' => ClickUpListMembers::class,
                 'type' => 'read',
-                'name' => 'Members',
-                'description' => 'List, find, or resolve workspace members.',
+                'name' => 'List Members',
+                'description' => 'Get all workspace members.',
                 'icon' => 'ph:users',
+            ],
+            'clickup_find_member' => [
+                'class' => ClickUpFindMember::class,
+                'type' => 'read',
+                'name' => 'Find Member',
+                'description' => 'Find a member by name or email.',
+                'icon' => 'ph:user',
+            ],
+            'clickup_resolve_members' => [
+                'class' => ClickUpResolveMembers::class,
+                'type' => 'read',
+                'name' => 'Resolve Members',
+                'description' => 'Convert names/emails to user IDs.',
+                'icon' => 'ph:user-switch',
             ],
             // Task Management
             'clickup_get_tasks' => [
@@ -181,11 +213,19 @@ class ClickUpToolProvider implements ToolProvider, ConfigurableIntegration
                 'description' => 'Delete a task.',
                 'icon' => 'ph:trash',
             ],
-            'clickup_manage_tags' => [
-                'class' => ClickUpManageTags::class,
+            // Tags
+            'clickup_add_tag' => [
+                'class' => ClickUpAddTag::class,
                 'type' => 'write',
-                'name' => 'Manage Tags',
-                'description' => 'Add or remove tags on tasks.',
+                'name' => 'Add Tag',
+                'description' => 'Add an existing tag to a task.',
+                'icon' => 'ph:tag',
+            ],
+            'clickup_remove_tag' => [
+                'class' => ClickUpRemoveTag::class,
+                'type' => 'write',
+                'name' => 'Remove Tag',
+                'description' => 'Remove a tag from a task.',
                 'icon' => 'ph:tag',
             ],
             'clickup_attach_file' => [
@@ -195,42 +235,121 @@ class ClickUpToolProvider implements ToolProvider, ConfigurableIntegration
                 'description' => 'Attach a file to a task.',
                 'icon' => 'ph:paperclip',
             ],
-            // Collaboration
-            'clickup_manage_comments' => [
-                'class' => ClickUpManageComments::class,
-                'type' => 'write',
-                'name' => 'Comments',
-                'description' => 'Read or add comments on tasks.',
+            // Comments
+            'clickup_read_comments' => [
+                'class' => ClickUpReadComments::class,
+                'type' => 'read',
+                'name' => 'Read Comments',
+                'description' => 'Get all comments on a task.',
                 'icon' => 'ph:chat-circle',
             ],
-            'clickup_time_tracking' => [
-                'class' => ClickUpTimeTracking::class,
+            'clickup_add_comment' => [
+                'class' => ClickUpAddComment::class,
                 'type' => 'write',
-                'name' => 'Time Tracking',
-                'description' => 'Start, stop, log, or list time entries.',
+                'name' => 'Add Comment',
+                'description' => 'Add a comment to a task.',
+                'icon' => 'ph:chat-circle',
+            ],
+            // Time Tracking
+            'clickup_start_timer' => [
+                'class' => ClickUpStartTimer::class,
+                'type' => 'write',
+                'name' => 'Start Timer',
+                'description' => 'Start a timer on a task.',
                 'icon' => 'ph:timer',
             ],
-            // Organization
-            'clickup_manage_list' => [
-                'class' => ClickUpManageList::class,
+            'clickup_stop_timer' => [
+                'class' => ClickUpStopTimer::class,
                 'type' => 'write',
-                'name' => 'Manage List',
-                'description' => 'Create, get, or update lists.',
+                'name' => 'Stop Timer',
+                'description' => 'Stop the running timer.',
+                'icon' => 'ph:timer',
+            ],
+            'clickup_log_time' => [
+                'class' => ClickUpLogTime::class,
+                'type' => 'write',
+                'name' => 'Log Time',
+                'description' => 'Add a manual time entry.',
+                'icon' => 'ph:timer',
+            ],
+            'clickup_list_time_entries' => [
+                'class' => ClickUpListTimeEntries::class,
+                'type' => 'read',
+                'name' => 'List Time Entries',
+                'description' => 'Get all time entries for a task.',
+                'icon' => 'ph:timer',
+            ],
+            'clickup_current_time_entry' => [
+                'class' => ClickUpCurrentTimeEntry::class,
+                'type' => 'read',
+                'name' => 'Current Time Entry',
+                'description' => 'Get the currently running timer.',
+                'icon' => 'ph:timer',
+            ],
+            // Lists
+            'clickup_create_list' => [
+                'class' => ClickUpCreateList::class,
+                'type' => 'write',
+                'name' => 'Create List',
+                'description' => 'Create a list in a space.',
                 'icon' => 'ph:list-bullets',
             ],
-            'clickup_manage_folder' => [
-                'class' => ClickUpManageFolder::class,
+            'clickup_create_list_in_folder' => [
+                'class' => ClickUpCreateListInFolder::class,
                 'type' => 'write',
-                'name' => 'Manage Folder',
-                'description' => 'Create, get, or update folders.',
+                'name' => 'Create List in Folder',
+                'description' => 'Create a list in a folder.',
+                'icon' => 'ph:list-bullets',
+            ],
+            'clickup_get_list' => [
+                'class' => ClickUpGetList::class,
+                'type' => 'read',
+                'name' => 'Get List',
+                'description' => 'Get list details by ID.',
+                'icon' => 'ph:list-bullets',
+            ],
+            'clickup_update_list' => [
+                'class' => ClickUpUpdateList::class,
+                'type' => 'write',
+                'name' => 'Update List',
+                'description' => 'Update a list.',
+                'icon' => 'ph:list-bullets',
+            ],
+            // Folders
+            'clickup_create_folder' => [
+                'class' => ClickUpCreateFolder::class,
+                'type' => 'write',
+                'name' => 'Create Folder',
+                'description' => 'Create a folder in a space.',
+                'icon' => 'ph:folder',
+            ],
+            'clickup_get_folder' => [
+                'class' => ClickUpGetFolder::class,
+                'type' => 'read',
+                'name' => 'Get Folder',
+                'description' => 'Get folder details by ID.',
+                'icon' => 'ph:folder',
+            ],
+            'clickup_update_folder' => [
+                'class' => ClickUpUpdateFolder::class,
+                'type' => 'write',
+                'name' => 'Update Folder',
+                'description' => 'Update a folder.',
                 'icon' => 'ph:folder',
             ],
             // Chat
-            'clickup_chat' => [
-                'class' => ClickUpChat::class,
+            'clickup_list_channels' => [
+                'class' => ClickUpListChannels::class,
+                'type' => 'read',
+                'name' => 'List Channels',
+                'description' => 'List all chat channels.',
+                'icon' => 'ph:chat-dots',
+            ],
+            'clickup_send_message' => [
+                'class' => ClickUpSendMessage::class,
                 'type' => 'write',
-                'name' => 'Chat',
-                'description' => 'List channels or send messages.',
+                'name' => 'Send Message',
+                'description' => 'Send a message to a chat channel.',
                 'icon' => 'ph:chat-dots',
             ],
             // Documents
@@ -241,11 +360,32 @@ class ClickUpToolProvider implements ToolProvider, ConfigurableIntegration
                 'description' => 'Create a ClickUp document.',
                 'icon' => 'ph:file-text',
             ],
-            'clickup_manage_document_pages' => [
-                'class' => ClickUpManageDocumentPages::class,
+            'clickup_list_doc_pages' => [
+                'class' => ClickUpListDocPages::class,
+                'type' => 'read',
+                'name' => 'List Doc Pages',
+                'description' => 'List all pages in a document.',
+                'icon' => 'ph:note',
+            ],
+            'clickup_get_doc_pages' => [
+                'class' => ClickUpGetDocPages::class,
+                'type' => 'read',
+                'name' => 'Get Doc Pages',
+                'description' => 'Get the content of document pages.',
+                'icon' => 'ph:note',
+            ],
+            'clickup_create_doc_page' => [
+                'class' => ClickUpCreateDocPage::class,
                 'type' => 'write',
-                'name' => 'Document Pages',
-                'description' => 'List, get, create, or update document pages.',
+                'name' => 'Create Doc Page',
+                'description' => 'Create a new page in a document.',
+                'icon' => 'ph:note',
+            ],
+            'clickup_update_doc_page' => [
+                'class' => ClickUpUpdateDocPage::class,
+                'type' => 'write',
+                'name' => 'Update Doc Page',
+                'description' => 'Update a page in a document.',
                 'icon' => 'ph:note',
             ],
         ];
